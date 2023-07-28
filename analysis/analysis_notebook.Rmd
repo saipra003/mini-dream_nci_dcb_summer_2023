@@ -1,0 +1,73 @@
+---
+title: "Mini-DREAM Analysis"
+output: html_notebook
+---
+The purpose of this notebook is to detail a few approaches to the mini-DREAM challenge status in the `README.md` file. Feel free to make changes and extend the work in this notebook.
+
+## Understanding the Data
+Before, we jump into the cool visualization steps, we need to understand what we're dealing with. The files we're working with in this project are pretty easy to open with Excel or Keynote (if you're a Mac user), but in the future, you may work with larger datasets that you cannot open through these programs. Fortunately, we can read the .csv file and get a sample of what the data looks like.
+
+```{r Load data and display top rows}
+data <- read.csv("C:/Users/saipr/mini-dream_nci_dcb_summer_2023/data/MDA-PCa-2b control vs enzaR DifferentialExpression.csv", header = 1)
+colnames(data)[1] = "GeneID"
+head(data)
+```
+Let's breakdown what each of these columns means:
+* GeneID	ENSEMBL gene ID
+* GeneName	Gene name
+* IsCoding	Is the gene a known protein coding gene
+* log2FoldChange	Log2(fold-change)
+* stat	Wald test statistic
+* pvalue	p-value
+* padj	FDR corrected p-value
+* <Sample ID>	Normalized expression value for the specific <Sample ID>
+
+## Dimensionality Reduction
+
+When doing differential expression analysis it's important to see what genes and pathways are differentially expressed. To visualize the differential expression of certain genes, we can create a volacano plot. 
+
+```{r}
+setwd("C:/Users/saipr/mini-dream_nci_dcb_summer_2023/analysis/")
+
+library(EnhancedVolcano)
+library(org.Hs.eg.db)
+
+# convert Ensembl ID's to gene symbols
+ens <- data$GeneID
+symbols <- mapIds(org.Hs.eg.db, keys = ens,
+column = c('SYMBOL'), keytype = 'ENSEMBL')
+symbols <- symbols[!is.na(symbols)]
+symbols <- symbols[match(data$GeneID, names(symbols))]
+
+# get char vector of top 5 differentially expressed genes in each direction
+data <- data[order(data$log2FoldChange),]
+
+# filter for protein coding genes
+data_prot_coding <- data[data$IsCoding == "TRUE",]
+
+# create volcano plot
+ EnhancedVolcano(data_prot_coding,
+    lab = data_prot_coding$GeneName,
+    x = 'log2FoldChange',
+    y = 'pvalue',
+    selectLab = c('AR'),
+    xlab = bquote(~Log[2]~ 'fold change'),
+    pCutoff = 10e-14,
+    FCcutoff = 2.0,
+    pointSize = 4.0,
+    labSize = 6.0,
+    labCol = 'black',
+    labFace = 'bold',
+    boxedLabels = TRUE,
+    colAlpha = 4/5,
+    legendPosition = 'right',
+    legendLabSize = 14,
+    legendIconSize = 4.0,
+    drawConnectors = TRUE,
+    widthConnectors = 1.0,
+    colConnectors = 'black')
+ ggsave(filename = "differential_expression_volcano_plot.png", dpi = 700, type = "png", height = 20, width = 20)
+```
+
+
+
