@@ -8,8 +8,8 @@ The purpose of this notebook is to detail a few approaches to the mini-DREAM cha
 Before, we jump into the cool visualization steps, we need to understand what we're dealing with. The files we're working with in this project are pretty easy to open with Excel or Keynote (if you're a Mac user), but in the future, you may work with larger datasets that you cannot open through these programs. Fortunately, we can read the .csv file and get a sample of what the data looks like.
 
 ```{r Load data and display top rows}
-data <- read.csv("C:/Users/saipr/mini-dream_nci_dcb_summer_2023/data/MDA-PCa-2b control vs enzaR DifferentialExpression.csv", header = 1)
-colnames(data)[1] = "GeneID"
+library(tidyverse)
+data <- read_csv("C:/Users/saipr/mini-dream_nci_dcb_summer_2023/data/MDA-PCa-2b control vs enzaR DifferentialExpression.csv")
 head(data)
 ```
 Let's breakdown what each of these columns means:
@@ -23,7 +23,68 @@ Let's breakdown what each of these columns means:
 * <Sample ID>	Normalized expression value for the specific <Sample ID>
 
 ## Dimensionality Reduction
+It's hard to see differences in the expression of this many genes, so it would be interesting to see how the n-dimensional data would look in 2D. We can use dimensionality reduction to do this. 
+```{r}
+data_prot_cod <- data[data$IsCoding == 'TRUE',] # filter for protein coding data
+data_prot_cod <- data_prot_cod[,!(names(data_prot_cod) %in% c("GeneName","IsCoding","log2FoldChange", 'stat', 'pvalue', 'padj'))]
+# Create a matrix from our table of counts
+pca_matrix <- data_prot_cod %>% 
+  # make the "gene" column become the rownames of the table
+  column_to_rownames("GeneID") %>% 
+  # coerce to a matrix
+  as.matrix() %>% 
+  # transpose the matrix so that rows = samples and columns = variables
+  t()
 
+# Perform the PCA
+sample_pca <- prcomp(pca_matrix)
+# The PC scores are stored in the "x" value of the prcomp object
+pc_scores <- sample_pca$x
+
+pc_scores <- pc_scores %>% 
+  # convert to a tibble retaining the sample names as a new column
+  as_tibble(rownames = "sample")
+
+pc_scores %>% 
+  # create the plot
+  ggplot(aes(x = PC1, y = PC2)) +
+  geom_point(aes(color = condition))
+```
+Points appear to cluster well which is what we expect. But we want to create a higher quality PCA plot for presentation purposes. 
+
+```{r}
+library(PCAtools)
+
+pca_matrix_2 <- data_prot_cod %>% 
+  # make the "gene" column become the rownames of the table
+  column_to_rownames("GeneID") %>% 
+  # coerce to a matrix
+  as.matrix()
+
+metadata <- data.frame(pc_scores$condition, row.names = pc_scores$sample)
+p <- pca(pca_matrix_2, metadata = metadata, removeVar = 0.1)
+biplot(p,
+       colby = 'pc_scores.condition', 
+       colkey = c('treated' = 'forestgreen', 'control' = 'purple'),
+       gridlines.major = FALSE, 
+       gridlines.minor = FALSE,
+       title = "Principal Components Analysis",
+       subtitle = "Enzalutamide vs. DMSO",
+       titleLabSize = 16,
+       subtitleLabSize = 12,
+       # encircle config
+      encircle = TRUE,
+      encircleFill = TRUE,
+) + theme(axis.text.x=element_blank(),
+      axis.ticks.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks.y=element_blank(),
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle=element_text(hjust=0.5)
+      )
+setwd("C:/Users/saipr/mini-dream_nci_dcb_summer_2023/analysis/plots/")
+ggsave("principal_components_analysis.png", dpi = 300)
+```
 When doing differential expression analysis it's important to see what genes and pathways are differentially expressed. To visualize the differential expression of certain genes, we can create a volacano plot. 
 
 ```{r}
@@ -66,7 +127,7 @@ data_prot_coding <- data[data$IsCoding == "TRUE",]
     drawConnectors = TRUE,
     widthConnectors = 1.0,
     colConnectors = 'black')
- ggsave(filename = "differential_expression_volcano_plot.png", dpi = 700, type = "png", height = 20, width = 20)
+ ggsave(filename = "differential_expression_volcano_plot.png", dpi = 300, type = "png", height = 20, width = 20)
 ```
 
 
