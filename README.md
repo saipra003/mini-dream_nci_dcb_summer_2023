@@ -1,6 +1,6 @@
 # mini-DREAM NCI DCB Summer Program
 Code for mini-DREAM challenge from NCI DCB Summer 2023 Program.
-Code was developed for presentation of group LabRats (Camille Kutter, Ethan Cohen, Sai Manikonda) at the NCI DCB mini-DREAM program final presentation.
+Code was developed for presentation of group LabRats (Cammy Kutter, Ethan Cohen, Sai Manikonda) at the NCI DCB mini-DREAM program final presentation.
 
 All analyses on this file were run in R, using an R markdown script and in R studio. An HTML document of the final notebook was rendered. 
 
