@@ -87,6 +87,7 @@ biplot(p,
       )
 setwd("C:/Users/saipr/mini-dream_nci_dcb_summer_2023/analysis/plots/")
 ggsave("principal_components_analysis.png", dpi = 300)
+knitr::include_graphics('plots/principal_components_analysis.png')
 ```
 When doing differential expression analysis it's important to see what genes and pathways are differentially expressed. To visualize the differential expression of certain genes, we can create a volacano plot. Since we don't really know what genes to plot on here, let's take a look at the top differentially expressed genes in each direction and label them on the graph.
 
@@ -108,9 +109,11 @@ symbols <- symbols[match(data$GeneID, names(symbols))]
 data_prot_coding <- data[data$IsCoding == "TRUE",]
 
 # get char vector of top 5 differentially expressed genes in each direction
-data_prot_coding <- data_prot_coding[order(data$log2FoldChange),]
-down_reg <- head(data_prot_coding, 10)
-up_reg <- tail(data_prot_coding, 10)
+data_prot_coding <- data_prot_coding[order(-data_prot_coding$log2FoldChange),]
+data_prot_coding_sig <- data_prot_coding[data_prot_coding$pvalue < 0.05,]
+down_reg <- head(data_prot_coding_sig$GeneName, 5)
+up_reg <- tail(data_prot_coding_sig$GeneName, 5)
+up_down_reg <- c(up_reg, down_reg)
 
 
 
@@ -119,12 +122,12 @@ EnhancedVolcano(data_prot_coding,
   lab = data_prot_coding$GeneName,
   x = 'log2FoldChange',
   y = 'pvalue',
-  selectLab = c("EZH2", "AR", "FOXA1", "PTEN", "SPOP", "MYC", "SMAD4", "MYC-N", "BRCA1", "BRCA2"),
+  selectLab = up_down_reg,
   xlab = bquote(~Log[2]~ 'fold change'),
   pCutoff = 10e-14,
   FCcutoff = 2.0,
   pointSize = 4.0,
-  labSize = 6.0,
+  labSize = 8.0,
   labCol = 'black',
   labFace = 'bold',
   boxedLabels = TRUE,
@@ -134,8 +137,11 @@ EnhancedVolcano(data_prot_coding,
   legendIconSize = 4.0,
   drawConnectors = TRUE,
   widthConnectors = 1.0,
-  colConnectors = 'black')
-ggsave(filename = "differential_expression_volcano_plot.png", dpi = 300, type = "png", height = 20, width = 20)
+  colConnectors = 'black',
+  title = "Enzalutamide vs. DMSO Differential Expression",
+  subtitle = "MDA PCa-2b")
+ggsave(filename = "plots/differential_expression_volcano_plot.png", dpi = 300, type = "png", height = 12, width = 12)
+knitr::include_graphics('plots/differential_expression_volcano_plot.png')
 ```
 # Gene Set Enrichment Analysis
 Allows us to find pathways that are differentially expressed in the two populations.
@@ -196,18 +202,21 @@ kk2 <- gseKEGG(geneList     = kegg_gene_list,
                pAdjustMethod = "none",
                keyType       = "ncbi-geneid")
 kk2_df <- as.data.frame(kk2)
+
+# see the first few rows of the dataframe
+head(kk2_df, 15)
 ```
+We want to be able to see all this infomration in a convenient way, so we can create a dotplot of the information using the code below.
+
 
 ```{r}
+# visualize kegg pathway
 browseKEGG(kk2, 'hsa04060')
 library(pathview)
 hsa04110 <- pathview(gene.data  = kegg_gene_list,
                      pathway.id = "hsa04012",
                      species    = "hsa",
                      limit      = list(gene=max(abs(kegg_gene_list)), cpd=1))
-```
-
-```{r}
 dotplot(kk2, showCategory = 10, title = "Enriched Pathways" , split=".sign") + facet_grid(.~.sign)
 ggsave("enriched_paths_dotplot.png", device = 'png', dpi = 600)
 ```
